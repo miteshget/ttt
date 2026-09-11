@@ -1,13 +1,17 @@
 ---
-# defaults for conf_instructor
+# defaults for instructor_config
+
 # -------------------------------------------------------------------
 # Instructor vars
 # -------------------------------------------------------------------
 instructor:
   name: "instructor-{{ guid }}"
-  ctfd_ns: "instructor-{{ guid }}-cftd"
+  ctfd_ns: "instructor-{{ guid }}-ctfd"
   lab_ns: "instructor-{{ guid }}-lab"
   password: "{{ common_password }}"
+
+# List of instructor dicts — each needs: name, password, ctfd_ns, lab_ns
+instructors: []
 
 instructor_repos:
   - url: https://github.com/l3acon/ansible-challenge.git
@@ -16,14 +20,23 @@ instructor_repos:
 cluster_apps_domain: "{{ openshift_cluster_ingress_domain }}"
 
 # -------------------------------------------------------------------
-# CTFd Configuration 
+# AAP Configuration
+# -------------------------------------------------------------------
+aap_url: "https://aap.apps.{{ cluster_apps_domain }}"
+aap_admin_password: ""
+
+# -------------------------------------------------------------------
+# CTFd Configuration
 # -------------------------------------------------------------------
 ctfd_image: "ctfd/ctfd:3.7.7"
 ctfd_admin_username: admin
-ctfd_admin_password: supersecret123!
+ctfd_admin_password: ""
 ctfd_admin_email: admin@example.com
 ctfd_logs_pvc_size: 1Gi
 ctfd_uploads_pvc_size: 1Gi
+
+ctfd_challenges: []
+ctfd_challenges_advanced: []
 
 mysql_image: "mariadb:10.4.12"
 mysql_database: ctfd
@@ -32,17 +45,23 @@ mysql_password: ctfd
 mysql_root_password: ctfd
 mysql_pvc_size: 1Gi
 
-# PVC sizes
 redis_image: "redis:4"
 redis_pvc_size: 1Gi
 
 # -------------------------------------------------------------------
-# Gitea Configuration 
+# Verifier Configuration
+# -------------------------------------------------------------------
+verifier_image: "quay.io/rhpds/ansible-island-verifier:latest"
+verifier_hmac_secret: ""
+
+vm_ssh_user: lab-user
+
+# -------------------------------------------------------------------
+# Gitea Configuration
 # -------------------------------------------------------------------
 gitea_url: "<CHANGEME>"
 gitea_admin_user: admin
-gitea_admin_password: "<CHANGEME>"
-
+gitea_admin_password: ""
 
 # -------------------------------------------------------------------
 # Keycloak Configuration
