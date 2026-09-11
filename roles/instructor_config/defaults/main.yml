@@ -1,0 +1,75 @@
+---
+# defaults for conf_instructor
+# -------------------------------------------------------------------
+# Instructor vars
+# -------------------------------------------------------------------
+instructor:
+  name: "instructor-{{ guid }}"
+  ctfd_ns: "instructor-{{ guid }}-cftd"
+  lab_ns: "instructor-{{ guid }}-lab"
+  password: "{{ common_password }}"
+
+instructor_repos:
+  - url: https://github.com/l3acon/ansible-challenge.git
+    name: ansible-challenge
+
+cluster_apps_domain: "{{ openshift_cluster_ingress_domain }}"
+
+# -------------------------------------------------------------------
+# CTFd Configuration 
+# -------------------------------------------------------------------
+ctfd_image: "ctfd/ctfd:3.7.7"
+ctfd_admin_username: admin
+ctfd_admin_password: supersecret123!
+ctfd_admin_email: admin@example.com
+ctfd_logs_pvc_size: 1Gi
+ctfd_uploads_pvc_size: 1Gi
+
+mysql_image: "mariadb:10.4.12"
+mysql_database: ctfd
+mysql_user: ctfd
+mysql_password: ctfd
+mysql_root_password: ctfd
+mysql_pvc_size: 1Gi
+
+# PVC sizes
+redis_image: "redis:4"
+redis_pvc_size: 1Gi
+
+# -------------------------------------------------------------------
+# Gitea Configuration 
+# -------------------------------------------------------------------
+gitea_url: "<CHANGEME>"
+gitea_admin_user: admin
+gitea_admin_password: "<CHANGEME>"
+
+
+# -------------------------------------------------------------------
+# Keycloak Configuration
+# -------------------------------------------------------------------
+keycloak_admin_console: https://sso.apps.cluster-bnbsj.dyn.redhatworkshops.io
+keycloak_admin_user: temp-admin
+keycloak_admin_password: ""
+
+# -------------------------------------------------------------------
+# Resource Requests (lab-optimized)
+# -------------------------------------------------------------------
+resources:
+  mysql:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+  redis:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 250m, memory: 256Mi }
+  ctfd:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits: { cpu: '1', memory: 1Gi }
+  verifier:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 250m, memory: 256Mi }
+  gitea:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits: { cpu: '1', memory: 1Gi }
+  gitea_postgres:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }

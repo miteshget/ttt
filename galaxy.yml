@@ -1,0 +1,17 @@
+namespace: rhpds
+name: ttt
+version: 1.0.0
+readme: README.md
+authors:
+- Mitesh Sharma <mitsharm@redhat.com>
+description: your collection description
+license:
+- GPL-2.0-or-later
+license_file: ''
+tags: []
+dependencies: {}
+# repository: https://github.com/rhpds/rhpds.ttt.git
+# documentation: https://github.com/rhpds/rhpds.ttt.git
+# homepage: https://github.com/rhpds/rhpds.ttt.git
+# issues: https://github.com/rhpds/rhpds.ttt.git/issues
+build_ignore: []
