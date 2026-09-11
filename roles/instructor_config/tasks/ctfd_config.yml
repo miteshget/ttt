@@ -37,8 +37,9 @@
 #     loop_var: _inst
 #     label: "{{ _inst.name }}"
 
----
+# ------------------------------------------------------------------
 # Build and upload CTFd archive for one instructor.
+# ------------------------------------------------------------------
 
 - name: "{{ instructor.name }} — Set CTFd facts"
   ansible.builtin.set_fact:
