@@ -10,7 +10,7 @@
   block:
     - name: Download oc tarball
       ansible.builtin.get_url:
-        url: "https://downloads-openshift-console.apps.{{ cluster_apps_domain }}/amd64/linux/oc.tar.gz"
+        url: "{{ openshift_client_download_url }}"
         dest: /tmp/oc.tar.gz
         validate_certs: false
         mode: "0644"
