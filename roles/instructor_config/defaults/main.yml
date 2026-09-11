@@ -20,6 +20,13 @@ instructor_repos:
 cluster_apps_domain: "{{ openshift_cluster_ingress_domain }}"
 
 # -------------------------------------------------------------------
+# OCP Login
+# -------------------------------------------------------------------
+ocp_api_url: ""
+ocp_admin_user: ""
+ocp_admin_password: ""
+
+# -------------------------------------------------------------------
 # AAP Configuration
 # -------------------------------------------------------------------
 aap_url: "https://aap.apps.{{ cluster_apps_domain }}"
