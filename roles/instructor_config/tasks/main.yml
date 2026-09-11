@@ -23,11 +23,13 @@
         include:
           - oc
         mode: "0755"
+      become: true
 
     - name: Remove oc tarball
       ansible.builtin.file:
         path: /tmp/oc.tar.gz
         state: absent
+      become: true
 
 - name: Login to OCP cluster
   ansible.builtin.command:
