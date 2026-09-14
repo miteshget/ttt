@@ -38,7 +38,6 @@
     --password={{ ocp_admin_password }}
     --insecure-skip-tls-verify=true
   changed_when: false
-  no_log: true
 
 
 - name: "{{ instructor.name }} — Create namespaces"
