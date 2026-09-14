@@ -1,5 +1,26 @@
 ---
+# aap_controller_web_url: https://aap-aap.apps.cluster-8zwws.dyn.redhatworkshops.io
+# devspaces_url: https://devspaces.apps.cluster-8zwws.dyn.redhatworkshops.io
+# gitea_console_url: https://gitea.apps.cluster-8zwws.dyn.redhatworkshops.io
+# keycloak_admin_console: https://sso.apps.cluster-8zwws.dyn.redhatworkshops.io
+# openshift_api_server_url: https://api.cluster-8zwws.dyn.redhatworkshops.io:6443
+# sandbox_openshift_api_url: https://api.ocpv08.dal10.infra.demo.redhat.com:6443
+
+
+# openshift_cluster_ingress_domain: apps.cluster-8zwws.dyn.redhatworkshops.io
+# common_ocp_cluster_password:
+# keycloak_admin_user: temp-admin
+# keycloak_admin_password: ""
 # defaults for instructor_config
+# -------------------------------------------------------------------
+# OCP Login
+# -------------------------------------------------------------------
+cluster_apps_domain: "{{ openshift_cluster_ingress_domain }}"
+ocp_api_url: "https://api.{{ cluster_apps_domain | regex_replace('^apps\.', '') }}:6443"
+ocp_admin_user: "admin"
+ocp_admin_password: "{{ common_ocp_cluster_password }}"
+openshift_client_download_url: >-
+  https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.21/openshift-client-linux.tar.gz
 
 # -------------------------------------------------------------------
 # Instructor vars
@@ -11,27 +32,17 @@ instructor:
   password: "{{ common_password }}"
 
 # List of instructor dicts — each needs: name, password, ctfd_ns, lab_ns
-instructors: []
+# instructors: []
 
 instructor_repos:
   - url: https://github.com/l3acon/ansible-challenge.git
     name: ansible-challenge
 
-cluster_apps_domain: "{{ openshift_cluster_ingress_domain }}"
-
-# -------------------------------------------------------------------
-# OCP Login
-# -------------------------------------------------------------------
-ocp_api_url: ""
-ocp_admin_user: ""
-ocp_admin_password: ""
-openshift_client_download_url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.21/openshift-client-linux.tar.gz
-
 # -------------------------------------------------------------------
 # AAP Configuration
 # -------------------------------------------------------------------
-aap_url: "https://aap.apps.{{ cluster_apps_domain }}"
-aap_admin_password: ""
+aap_url: "https://aap-aap.{{ cluster_apps_domain }}"
+aap_admin_password: "{{ common_ocp_cluster_password }}"
 
 # -------------------------------------------------------------------
 # CTFd Configuration
@@ -67,14 +78,15 @@ vm_ssh_user: lab-user
 # -------------------------------------------------------------------
 # Gitea Configuration
 # -------------------------------------------------------------------
-gitea_url: "<CHANGEME>"
+gitea_url: "https://gitea.{{ cluster_apps_domain }}"
 gitea_admin_user: admin
-gitea_admin_password: ""
+gitea_admin_password: "{{ common_ocp_cluster_password }}"
 
 # -------------------------------------------------------------------
 # Keycloak Configuration
 # -------------------------------------------------------------------
-keycloak_admin_console: https://sso.apps.cluster-bnbsj.dyn.redhatworkshops.io
+keycloak_admin_console: "https://sso.{{ cluster_apps_domain }}"
+# keycloak_admin_console: https://sso.apps.cluster-bnbsj.dyn.redhatworkshops.io
 keycloak_admin_user: temp-admin
 keycloak_admin_password: ""
 
