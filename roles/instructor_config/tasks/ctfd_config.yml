@@ -48,20 +48,18 @@
     - hints
     - config
 
-- name: "{{ instructor.name }} — Convert all YAML DB files to JSON"
-  ansible.builtin.shell:
-    cmd: >
-      python3 -c "import yaml, json, sys;
-      data = yaml.safe_load(open(sys.argv[1]));
-      json.dump(data, open(sys.argv[1].replace('.yml','.json'), 'w'), indent=2)"
-      "{{ _archive_dir.path }}/db/{{ item | basename }}"
-  loop: "{{ lookup('fileglob', _archive_dir.path + '/db/*.yml', wantlist=True) }}"
-  changed_when: true
+- name: "{{ instructor.name }} — Convert YAML DB files to JSON"
+  ansible.builtin.copy:
+    content: "{{ lookup('file', item) | from_yaml | to_json }}"
+    dest: "{{ item | regex_replace('\\.yml$', '.json') }}"
+    mode: "0644"
+  loop: "{{ query('fileglob', _archive_dir.path + '/db/*.yml') }}"
 
 - name: "{{ instructor.name }} — Remove YAML files from db dir"
-  ansible.builtin.shell:
-    cmd: "rm -f {{ _archive_dir.path }}/db/*.yml"
-  changed_when: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ query('fileglob', _archive_dir.path + '/db/*.yml') }}"
 
 - name: "{{ instructor.name }} — Copy uploads directory"
   ansible.builtin.copy:
