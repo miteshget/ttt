@@ -1,6 +1,5 @@
 ---
 # Build CTFd import archive and upload to each instructor's CTFd instance.
-# Called once — loops internally over instructors.
 
 - name: Merge challenge lists
   ansible.builtin.set_fact:
@@ -14,52 +13,9 @@
   loop_control:
     index_var: idx
 
-- name: Hash CTFd admin password (bcrypt_sha256 for CTFd)
-  ansible.builtin.shell:
-    cmd: |
-      python3 -c "
-      import sys
-      from passlib.hash import bcrypt_sha256
-      print(bcrypt_sha256.hash(sys.stdin.read().strip()))
-      " <<< "{{ ctfd_admin_password }}"
-  register: _admin_hash_cmd
-  changed_when: false
-
-- name: Set admin hash fact
-  ansible.builtin.set_fact:
-    _ctfd_admin_hash: "{{ _admin_hash_cmd.stdout | trim }}"
-
-# ── Per-instructor archive build + upload ────────────────────────
-# - name: Configure CTFd for each instructor
-#   ansible.builtin.include_tasks: per_instructor.yml
-#   loop: "{{ instructors }}"
-#   loop_control:
-#     loop_var: _inst
-#     label: "{{ _inst.name }}"
-
-# ------------------------------------------------------------------
-# Build and upload CTFd archive for one instructor.
-# ------------------------------------------------------------------
-
-- name: "{{ instructor.name }} — Set CTFd facts"
+- name: "{{ instructor.name }} — Set CTFd base URL"
   ansible.builtin.set_fact:
     _ctfd_base_url: "https://island-{{ instructor.ctfd_ns }}.{{ cluster_apps_domain }}"
-
-- name: "{{ instructor.name }} — Hash instructor password for CTFd (bcrypt_sha256)"
-  ansible.builtin.shell:
-    cmd: |
-      python3 -c "
-      import sys
-      from passlib.hash import bcrypt_sha256
-      print(bcrypt_sha256.hash(sys.stdin.read().strip()))
-      " <<< "{{ instructor.password }}"
-  register: _inst_hash_result
-  changed_when: false
-  no_log: true
-
-- name: "{{ instructor.name }} — Set instructor hash"
-  ansible.builtin.set_fact:
-    _ctfd_instructor_hash: "{{ _inst_hash_result.stdout | trim }}"
 
 # ── Build archive directory ──────────────────────────────────────
 - name: "{{ instructor.name }} — Create archive temp directory"
@@ -90,7 +46,6 @@
     - challenges
     - flags
     - hints
-    - users
     - config
 
 - name: "{{ instructor.name }} — Convert all YAML DB files to JSON"
@@ -122,7 +77,7 @@
     dest: "{{ _archive_dir.path }}/ctfd-import.zip"
     format: zip
 
-# ── Upload to CTFd via curl (reliable cookie/CSRF handling) ──────
+# ── Upload to CTFd ───────────────────────────────────────────────
 - name: "{{ instructor.name }} — Wait for CTFd to be healthy"
   ansible.builtin.uri:
     url: "{{ _ctfd_base_url }}/healthcheck"
@@ -146,7 +101,6 @@
       - python3
       - -c
       - |
-        import os
         from CTFd import create_app
         app = create_app()
         with app.app_context():
@@ -154,6 +108,8 @@
             print(Challenges.query.count())
   register: _existing_challenges
   failed_when: false
+  environment:
+    PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: "{{ instructor.name }} — Setup, login, and import CTFd archive"
   when: (_existing_challenges.stdout_lines | default(['0']) | last | trim | int) == 0
@@ -167,7 +123,6 @@
     COOKIES=$(mktemp)
     trap "rm -f $COOKIES" EXIT
 
-    # Check if setup is needed
     SETUP_CODE=$(curl -sk -o /dev/null -w '%{http_code}' "$URL/setup")
     if [ "$SETUP_CODE" = "200" ]; then
       NONCE=$(curl -sk "$URL/setup" -c "$COOKIES" | grep -oP 'name="nonce"[^>]+value="\K[0-9a-f]+')
@@ -177,12 +132,10 @@
       sleep 2
     fi
 
-    # Login
     NONCE=$(curl -sk "$URL/login" -c "$COOKIES" | grep -oP 'name="nonce"[^>]+value="\K[0-9a-f]+')
     curl -sk "$URL/login" -b "$COOKIES" -c "$COOKIES" -X POST \
       -d "nonce=$NONCE&name=$ADMIN&password=$PASS" -o /dev/null
 
-    # Get CSRF and upload
     CSRF=$(curl -sk "$URL/admin/import" -b "$COOKIES" | grep -oP "'csrfNonce':\s*\"([0-9a-f]+)\"" | grep -oP '[0-9a-f]{64}')
     if [ -z "$CSRF" ]; then
       echo "ERROR: Could not get CSRF nonce"
@@ -196,10 +149,50 @@
   register: _ctfd_import
   changed_when: "'SUCCESS' in (_ctfd_import.stdout | default(''))"
   failed_when: "'ERROR' in (_ctfd_import.stdout | default(''))"
+  no_log: true
 
 - name: "{{ instructor.name }} — Wait for import to settle"
   ansible.builtin.pause:
     seconds: 25
+
+# ── Create instructor user via CTFd internals (no passlib needed) ─
+- name: "{{ instructor.name }} — Create instructor user in CTFd"
+  ansible.builtin.command:
+    argv:
+      - oc
+      - exec
+      - deploy/ctfd
+      - -n
+      - "{{ instructor.ctfd_ns }}"
+      - --
+      - python3
+      - -c
+      - |
+        from CTFd import create_app
+        app = create_app()
+        with app.app_context():
+            from CTFd.models import Users, db
+            from CTFd.utils.crypto import hash_password
+            existing = Users.query.filter_by(name="{{ instructor.name }}").first()
+            if existing:
+                existing.password = hash_password("{{ instructor.password }}")
+                db.session.commit()
+                print("UPDATED")
+            else:
+                user = Users(
+                    name="{{ instructor.name }}",
+                    email="{{ instructor.name }}@island.local",
+                    password=hash_password("{{ instructor.password }}"),
+                    type="user"
+                )
+                db.session.add(user)
+                db.session.commit()
+                print("CREATED")
+  register: _ctfd_user
+  changed_when: "'CREATED' in (_ctfd_user.stdout | default(''))"
+  no_log: true
+  environment:
+    PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: "{{ instructor.name }} — Verify challenges in database"
   ansible.builtin.command:
@@ -213,7 +206,6 @@
       - python3
       - -c
       - |
-        import os
         from CTFd import create_app
         app = create_app()
         with app.app_context():
@@ -223,16 +215,17 @@
   retries: 5
   delay: 5
   until: (_challenge_count.stdout_lines | default(['0']) | last | trim | int) > 0
+  environment:
+    PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: "{{ instructor.name }} — Report CTFd configured"
   ansible.builtin.debug:
-    msg: "CTFd for {{ instructor.name }}: {{ _challenge_count.stdout_lines | last | trim }} challenges loaded at {{ _ctfd_base_url }}"
+    msg: >-
+      CTFd for {{ instructor.name }}:
+      {{ _challenge_count.stdout_lines | last | trim }} challenges loaded,
+      user {{ _ctfd_user.stdout | trim }} at {{ _ctfd_base_url }}
 
 - name: "{{ instructor.name }} — Cleanup temp directory"
   ansible.builtin.file:
     path: "{{ _archive_dir.path }}"
     state: absent
-
-- name: "{{ instructor.name }} — Reset hashes for next iteration"
-  ansible.builtin.set_fact:
-    _ctfd_instructor_hash: ""
